@@ -15,11 +15,18 @@ function setup() {
 
 function startAudio() {
   if (!isPlaying) {
-    mic.start();
-    fft.setInput(mic);
-    isPlaying = true;
+    // This ensures that the audio context is in a resumable state,
+    // as user interaction is present in this function call.
+    userStartAudio().then(() => {
+      mic.start();
+      fft.setInput(mic);
+      isPlaying = true;
+    }).catch((e) => {
+      console.log("Error starting audio:", e);
+    });
   }
 }
+
 
 function draw() {
   background(20,120,120);
@@ -36,10 +43,27 @@ function draw() {
 
 }
 
+
 function touchStarted() {
+  console.log('touchStarted');
   if (getAudioContext().state !== 'running') {
     getAudioContext().resume();
+    mic.start();  // Start the microphone input
+    fft.setInput(mic);  // Set the FFT input to the microphone
   }
+  // prevent default
   return false;
 }
+
+/*
+function touchStarted() {
+  if (getAudioContext().state !== 'running') {
+    userStartAudio().then(() => {
+      console.log("Audio context resumed!");
+    }).catch((e) => {
+      console.log("Error resuming audio context:", e);
+    });
+  }
+  return false;
+}*/
 
