@@ -123,3 +123,7 @@ function render_sens(v) {
   rect(0, 0, vv, 5);
   pop();
 }
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight); 
+}
