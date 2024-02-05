@@ -2,15 +2,28 @@ let mic, fft;
 let hi = 40;
 let isPlaying = false; // flag to track if audio is playing
 
+let audioInitialized = false; // Flag to ensure audio is initialized once
+
+let sens = 1.0;
+const sens_hi = 2.5;
+
 function setup() {
   createCanvas(windowWidth, windowHeight);
   mic = new p5.AudioIn();
   fft = new p5.FFT();
 
-  // Create a button element
-  let button = createButton('Start');
-  button.position(10, 10);
-  button.mousePressed(startAudio);
+  let text = createP('Touch to Start');  
+  text.style('font-size', '48px'); 
+  text.style('color', 'white'); 
+  text.position(width / 2 - text.width / 2, height / 2 - text.height / 2); // Re-position after setting style
+  
+  text.style('text-align', 'center');
+  text.position(width / 2 - text.elt.offsetWidth / 2, height / 2 - text.elt.offsetHeight / 2);
+
+  // Display "Start" text for 3 seconds
+  setTimeout(() => {
+    text.remove();
+  }, 3000);
 }
 
 function startAudio() {
@@ -27,9 +40,39 @@ function startAudio() {
   }
 }
 
+function touchStarted() {
+  console.log('touchStarted');
+  
+  if (!audioInitialized) {
+    getAudioContext().resume().then(() => {
+      console.log("Audio context resumed successfully");
+      mic.start(() => {
+        console.log("Microphone started successfully");
+        fft.setInput(mic);
+        audioInitialized = true;
+      }, (err) => {
+        console.error("Error starting microphone:", err);
+      });
+    }).catch((err) => {
+      console.error("Error resuming audio context:", err);
+    });
+  }
+  
+  if (mouseX > width / 2) {
+    sens += 0.1; // Increase sens by 0.1
+  } else {
+    sens -= 0.1; // Decrease sens by 0.1
+  }
+
+  sens = constrain(sens, 0, sens_hi);
+  console.log('sens:', sens);
+  
+  return false;
+}
 
 function draw() {
   background(20,120,120);
+  render_sens(sens);
 
   let spectrum = fft.analyze();
   noStroke();
@@ -43,27 +86,18 @@ function draw() {
 
 }
 
-
-function touchStarted() {
-  console.log('touchStarted');
-  if (getAudioContext().state !== 'running') {
-    getAudioContext().resume();
-    mic.start();  // Start the microphone input
-    fft.setInput(mic);  // Set the FFT input to the microphone
-  }
-  // prevent default
-  return false;
+function render_sens(v) {
+  push();
+  fill(255);
+  let vv = map(v, 0, 2, 0, width);
+  rect(0, 0, vv, 10);
+  pop();
 }
 
-/*
-function touchStarted() {
-  if (getAudioContext().state !== 'running') {
-    userStartAudio().then(() => {
-      console.log("Audio context resumed!");
-    }).catch((e) => {
-      console.log("Error resuming audio context:", e);
-    });
-  }
-  return false;
-}*/
-
+function render_sens(v) {
+  push();
+  fill("#9a3412");
+  let vv = map(v, 0, sens_hi, 0, width);
+  rect(0, 0, vv, 10);
+  pop();
+}
