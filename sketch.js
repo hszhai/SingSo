@@ -77,13 +77,35 @@ function draw() {
   let spectrum = fft.analyze();
   noStroke();
 
+  /*
   for (let i = 0; i < spectrum.length; i++) {
     let amp = spectrum[i];
-    let y = map(amp, 0, 256, height, 0);
-    fill(255, 255, 255);
-    rect(i * hi, y, hi, height - y);
+    let R = map(amp, 0, 256, 0, 255) * sens;
+    //fill(i*10 +10, 0, 0, 10+5*i);
+    fill(255, 0, 0, 10+5*i);
+    ellipse(windowWidth/2, windowHeight-i*16 +20 , R); 
+  }
+  */
+
+
+  // Determine the frequency range indexes
+  let lowFreq = freqToIndex(80); // Assuming 80 Hz is the lower bound of human voice
+  let highFreq = freqToIndex(1100); // Assuming 1100 Hz is the upper bound of human voice
+
+  for (let i = lowFreq; i <= highFreq; i++) {
+    let amp = spectrum[i];
+    let R = map(amp, 0, 256, 0, 255) * sens;
+    fill(R*(1+i/highFreq), R+(1+i/highFreq)*i, 100, 10 + 5 * (i - lowFreq));
+    ellipse(windowWidth / 2, windowHeight - (i - lowFreq) * 16*(1+i/highFreq) + 20, R*(1+i/highFreq));
   }
 
+
+}
+
+// Utility function to convert frequency to FFT index
+function freqToIndex(freq) {
+  let nyquist = sampleRate() / 2;
+  return Math.floor((freq / nyquist) * (fft.analyze().length / 2));
 }
 
 function render_sens(v) {
@@ -96,8 +118,8 @@ function render_sens(v) {
 
 function render_sens(v) {
   push();
-  fill("#9a3412");
+  fill("#14b8a6");
   let vv = map(v, 0, sens_hi, 0, width);
-  rect(0, 0, vv, 10);
+  rect(0, 0, vv, 5);
   pop();
 }
