@@ -2,6 +2,9 @@ let mic, fft;
 let hi = 40;
 let isPlaying = false; // flag to track if audio is playing
 
+let currentEmoji; 
+let rewardTarget = 250;
+
 let audioInitialized = false; // Flag to ensure audio is initialized once
 
 let sens = 1.0;
@@ -9,6 +12,9 @@ const sens_hi = 2.5;
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
+  frameRate(60);
+  pickNewEmoji();
+  
   mic = new p5.AudioIn();
   fft = new p5.FFT();
 
@@ -77,17 +83,6 @@ function draw() {
   let spectrum = fft.analyze();
   noStroke();
 
-  /*
-  for (let i = 0; i < spectrum.length; i++) {
-    let amp = spectrum[i];
-    let R = map(amp, 0, 256, 0, 255) * sens;
-    //fill(i*10 +10, 0, 0, 10+5*i);
-    fill(255, 0, 0, 10+5*i);
-    ellipse(windowWidth/2, windowHeight-i*16 +20 , R); 
-  }
-  */
-
-
   // Determine the frequency range indexes
   let lowFreq = freqToIndex(80); // Assuming 80 Hz is the lower bound of human voice
   let highFreq = freqToIndex(1100); // Assuming 1100 Hz is the upper bound of human voice
@@ -95,6 +90,10 @@ function draw() {
   for (let i = lowFreq; i <= highFreq; i++) {
     let amp = spectrum[i];
     let R = map(amp, 0, 256, 0, 255) * sens;
+
+    if (i> (lowFreq+(highFreq-lowFreq)/2) && R > rewardTarget) {
+      draw_emoji();
+    }
     fill(R*(1+i/highFreq), R+(1+i/highFreq)*i, 100, 10 + 5 * (i - lowFreq));
     ellipse(windowWidth / 2, windowHeight - (i - lowFreq) * 16*(1+i/highFreq) + 20, R*(1+i/highFreq));
   }
@@ -110,14 +109,6 @@ function freqToIndex(freq) {
 
 function render_sens(v) {
   push();
-  fill(255);
-  let vv = map(v, 0, 2, 0, width);
-  rect(0, 0, vv, 10);
-  pop();
-}
-
-function render_sens(v) {
-  push();
   fill("#14b8a6");
   let vv = map(v, 0, sens_hi, 0, width);
   rect(0, 0, vv, 5);
@@ -126,4 +117,21 @@ function render_sens(v) {
 
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight); 
+}
+
+function draw_emoji() {
+  // Change the emoji every 5 seconds (300 frames at 60 fps)
+  if (frameCount % 100 == 0) {
+    pickNewEmoji();
+  }
+
+  textSize(100 + random(-30, 30)); // Slightly vary the size for each emoji
+  textAlign(CENTER, CENTER); // Ensure the emoji is centered
+  textSize(120 + random(50));
+  text(currentEmoji, width * 0.8, height * 0.2);
+}
+
+function pickNewEmoji() {
+  let emojis = ["😄", "🎉", "🌟", "🥳", "👏", "🎁","👑","🦄","🌷","💎","🦋"];
+  currentEmoji = random(emojis); // Randomly pick a new emoji
 }
