@@ -92,6 +92,7 @@ function draw() {
     let R = map(amp, 0, 256, 0, 255) * sens;
 
     if (i> (lowFreq+(highFreq-lowFreq)/2) && R > rewardTarget) {
+      pickNewEmoji(i, lowFreq, highFreq);
       draw_emoji();
     }
     fill(R*(1+i/highFreq), R+(1+i/highFreq)*i, 100, 10 + 5 * (i - lowFreq));
@@ -131,7 +132,28 @@ function draw_emoji() {
   text(currentEmoji, width * 0.8, height * 0.2);
 }
 
+/*
 function pickNewEmoji() {
   let emojis = ["😄", "🎉", "🌟", "🥳", "👏", "🎁","👑","🦄","🌷","💎","🦋"];
   currentEmoji = random(emojis); // Randomly pick a new emoji
+}
+*/
+
+function pickNewEmoji(frequencyIndex, lowFreq, highFreq) {
+  // Define your emojis within the function to make it self-contained
+  //let emojis = ["😄", "🎉", "🌟", "🥳", "👏", "🎁", "👑", "🦄", "🌷", "💎", "🦋"];
+  let emojis = ["😄", "🌟", "🎁", "👑", "🦄", "🌷", "💎", "🦋"];
+
+  // Calculate the range of frequencies covered
+  let totalRange = highFreq - lowFreq;
+
+  // Calculate the size of each bin based on the number of emojis and the total frequency range
+  let binSize = totalRange / emojis.length;
+
+  // Determine the bin index for the current frequency
+  let binIndex = Math.floor((frequencyIndex - lowFreq) / binSize);
+  binIndex = constrain(binIndex, 0, emojis.length - 1); // Ensure binIndex is within bounds
+
+  // Set the current emoji based on the bin index
+  currentEmoji = emojis[binIndex];
 }
