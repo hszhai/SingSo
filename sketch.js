@@ -97,6 +97,31 @@ function touchStarted() {
   return false;
 }
 
+function touchEnded() {
+  // Capture the touch position
+  const touchX = mouseX;
+  const touchY = mouseY;
+
+  // Emit the touch position to the server
+  socket.emit('touchEvent', { x: touchX, y: touchY });
+
+  // Prevent default
+  return false;
+}
+
+function mouseReleased() {
+  // Capture the touch position
+  const touchX = mouseX;
+  const touchY = mouseY;
+
+  // Emit the touch position to the server
+  socket.emit('touchEvent', { x: touchX, y: touchY });
+
+  // Prevent default
+  return false;
+}
+
+
 function draw() {
   background(20,120,120);
   render_sens(sens);
