@@ -1,3 +1,5 @@
+let socket;
+
 let mic, fft;
 let hi = 40;
 let isPlaying = false; // flag to track if audio is playing
@@ -30,6 +32,10 @@ function setup() {
   setTimeout(() => {
     text.remove();
   }, 3000);
+
+  //socket = io.connect(window.location.origin); // Connect to the server
+  socket = io.connect('https://singing-socketio-server.glitch.me/');
+
 }
 
 function startAudio() {
