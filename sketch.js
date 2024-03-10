@@ -1,4 +1,5 @@
 let socket;
+let connectionStatus = '...'; // Initial status message
 
 let mic, fft;
 let hi = 40;
@@ -35,6 +36,20 @@ function setup() {
 
   //socket = io.connect(window.location.origin); // Connect to the server
   socket = io.connect('https://singing-socketio-server.glitch.me/');
+
+  // Event listener for successfully connecting to the server
+  socket.on('connect', function() {
+    connectionStatus = 'Connected!'; // Update status on successful connection
+  });
+
+  // Optionally, handle connection errors or disconnections
+  socket.on('connect_error', (error) => {
+    connectionStatus = 'Connection Failed: ' + error.message;
+  });
+
+  socket.on('disconnect', (reason) => {
+    connectionStatus = 'Disconnected: ' + reason;
+  });
 
 }
 
@@ -105,6 +120,10 @@ function draw() {
     ellipse(windowWidth / 2, windowHeight - (i - lowFreq) * 16*(1+i/highFreq) + 20, R*(1+i/highFreq));
   }
 
+  // Display connection status
+  fill(255); // White text color
+  textSize(16);
+  text(connectionStatus, 10, 20); // Position the status text at the top left
 
 }
 
