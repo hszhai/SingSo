@@ -5,7 +5,7 @@ let mic, fft;
 let hi = 40;
 let isPlaying = false; // flag to track if audio is playing
 
-let band_num = 10
+let band_num = 8
 
 let currentEmoji; 
 let rewardTarget = 250;
