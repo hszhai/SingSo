@@ -37,7 +37,7 @@ function setup() {
   }, 3000);
 
   //socket = io.connect(window.location.origin); // Connect to the server
-  socket = io.connect('https://singing-socketio-server.glitch.me/');
+  socket = io.connect('https://singing-turn-based.glitch.me/');
 
   // Event listener for successfully connecting to the server
   socket.on('connect', function() {
