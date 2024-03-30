@@ -131,13 +131,20 @@ function draw() {
   let spectrum = fft.analyze();
   noStroke();
 
+
+  // collect audio data, prepare for sending
+  let bin_amps = []
+
   // Determine the frequency range indexes
   let lowFreq = freqToIndex(80); // Assuming 80 Hz is the lower bound of human voice
   let highFreq = freqToIndex(1100); // Assuming 1100 Hz is the upper bound of human voice
 
   for (let i = lowFreq; i <= highFreq; i++) {
     let amp = spectrum[i];
-    let R = map(amp, 0, 256, 0, 255) * sens;
+    //let R = map(amp, 0, 256, 0, 255) * sens;
+    let R = amp * sens;
+
+    bin_amps.push({ freq_bin: i, amp: R });
 
     if (i> (lowFreq+(highFreq-lowFreq)/2) && R > rewardTarget) {
       pickNewEmoji(i, lowFreq, highFreq);
@@ -147,16 +154,36 @@ function draw() {
     ellipse(windowWidth / 2, windowHeight - (i - lowFreq) * 16*(1+i/highFreq) + 20, R*(1+i/highFreq));
   }
 
+  // After the loop that fills bin_amps
+
+  // Calculate the sum of the first 5 bins' amplitudes
+  let sumFirst5Bins = 0;
+  for (let i = 0; i < Math.min(5, bin_amps.length); i++) {
+    sumFirst5Bins += bin_amps[i].amp;
+  }
+
+  // Only send data if the sum of the first 5 bins' amplitudes is >= 0.1
+  if (sumFirst5Bins >= 10) {
+    console.log("Sending audio data:", bin_amps);
+    socket.emit('audioData', { bin_amps: bin_amps, timestamp: Date.now() });
+  } else {
+    console.log("Sum of the first 5 bins is too small, data not sent.");
+  }
+
   // Calculate bands dynamically based on 'n'
-  let bands = calculateBands(spectrum, band_num);
+  //let bands = calculateBands(spectrum, band_num);
+
+  //console.log("bin_amps", bin_amps)
+  //socket.emit('audioData', { bin_amps: bin_amps, timestamp: Date.now() });
 
   // Send bands data if significant change is detected (implement your logic)
-  if (shouldSendData(bands)) {
-    console.log("Sending audioData:", bands);
-    //socket.emit('audioData', bands);
-    socket.emit('audioData', { bands: bands, timestamp: Date.now() });
+  //if (shouldSendData(bands)) {
+  //  console.log("Sending audioData:", bands);
+  //  //socket.emit('audioData', bands);
+  //  socket.emit('audioData', { bands: bands, timestamp: Date.now() });
+  //}
 
-  }
+
 
   // Display connection status
   fill(255); // White text color
