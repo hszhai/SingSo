@@ -1,5 +1,6 @@
 let socket;
 let connectionStatus = '...'; // Initial status message
+let myGroup;
 
 let mic, fft;
 let hi = 40;
@@ -44,6 +45,13 @@ function setup() {
     connectionStatus = 'Connected!'; // Update status on successful connection
   });
 
+  socket.on('groupAssigned', function(group) {
+    myGroup = group;
+    console.log('My group:', myGroup);
+    // Now, you can use `myGroup` to display group-specific information,
+    // handle messages accordingly, etc.
+  });  
+
   // Optionally, handle connection errors or disconnections
   socket.on('connect_error', (error) => {
     connectionStatus = 'Connection Failed: ' + error.message;
@@ -87,10 +95,16 @@ function touchStarted() {
     });
   }
   
-  if (mouseX > width / 2) {
-    sens += 0.1; // Increase sens by 0.1
+  if (mouseY < height / 10) { 
+    if (mouseX < width / 2) {
+      socket.emit('joinGroup', 'left');
+    } else {
+      socket.emit('joinGroup', 'right');
+    }
+  } else if (mouseX > width / 2) {
+    sens += 0.1; 
   } else {
-    sens -= 0.1; // Decrease sens by 0.1
+    sens -= 0.1; 
   }
 
   sens = constrain(sens, 0, sens_hi);
@@ -100,13 +114,9 @@ function touchStarted() {
 }
 
 function touchEnded() {
-  // Capture the touch position
   const touchX = mouseX;
   const touchY = mouseY;
-
-  // Emit the touch position to the server
   socket.emit('touchEvent', { x: touchX, y: touchY });
-
   // Prevent default
   return false;
 }
@@ -126,11 +136,11 @@ function mouseReleased() {
 
 function draw() {
   background(20,120,120);
+  draw_group_cues();
   render_sens(sens);
 
   let spectrum = fft.analyze();
   noStroke();
-
 
   // collect audio data, prepare for sending
   let bin_amps = []
@@ -154,8 +164,6 @@ function draw() {
     ellipse(windowWidth / 2, windowHeight - (i - lowFreq) * 16*(1+i/highFreq) + 20, R*(1+i/highFreq));
   }
 
-  // After the loop that fills bin_amps
-
   // Calculate the sum of the first 5 bins' amplitudes
   let sumFirst5Bins = 0;
   for (let i = 0; i < Math.min(5, bin_amps.length); i++) {
@@ -164,27 +172,13 @@ function draw() {
 
   // Only send data if the sum of the first 5 bins' amplitudes is >= 0.1
   if (sumFirst5Bins >= 10) {
-    console.log("Sending audio data:", bin_amps);
+    //console.log("Sending audio data:", bin_amps);
     socket.emit('audioData', { bin_amps: bin_amps, timestamp: Date.now() });
   } else {
     console.log("Sum of the first 5 bins is too small, data not sent.");
   }
 
-  // Calculate bands dynamically based on 'n'
-  //let bands = calculateBands(spectrum, band_num);
-
-  //console.log("bin_amps", bin_amps)
-  //socket.emit('audioData', { bin_amps: bin_amps, timestamp: Date.now() });
-
-  // Send bands data if significant change is detected (implement your logic)
-  //if (shouldSendData(bands)) {
-  //  console.log("Sending audioData:", bands);
-  //  //socket.emit('audioData', bands);
-  //  socket.emit('audioData', { bands: bands, timestamp: Date.now() });
-  //}
-
-
-
+  
   // Display connection status
   fill(255); // White text color
   textSize(16);
@@ -199,17 +193,6 @@ function freqToIndex(freq) {
   return Math.floor((freq / nyquist) * (fft.analyze().length / 2));
 }
 
-
-/*
-// Utility function to convert frequency to FFT index, ensuring it doesn't exceed human voice frequency cap
-function freqToIndex(freq) {
-  let nyquist = sampleRate() / 2;
-  let index = Math.floor((freq / nyquist) * (fft.analyze().length / 2));
-  let maxIndex = Math.floor((1100 / nyquist) * (fft.analyze().length / 2)); // Cap at 1100 Hz
-  return Math.min(index, maxIndex);
-}
-*/
-
 function render_sens(v) {
   push();
   fill("#14b8a6");
@@ -218,12 +201,21 @@ function render_sens(v) {
   pop();
 }
 
+function draw_group_cues() {
+  push();
+  fill(200,0,0,50)
+  rect(0, 0, width/2, height/10);
+  fill(0,200,0,50)
+  rect(width/2, 0, width/2, height/10);
+  pop();
+}
+
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight); 
 }
 
 function draw_emoji() {
-  // Change the emoji every 5 seconds (300 frames at 60 fps)
+  // probably don't need this, as it will pick the same emoji based on frequency
   if (frameCount % 100 == 0) {
     pickNewEmoji();
   }
@@ -234,102 +226,16 @@ function draw_emoji() {
   text(currentEmoji, width * 0.8, height * 0.2);
 }
 
-/*
-// Utility function to divide spectrum into 'n' bands and calculate average amplitude for each
-function calculateBands(spectrum, n) {
-  let bands = [];
-  let bandWidth = Math.floor(spectrum.length / n); // Divide the spectrum array into 'n' segments
-
-  for (let b = 0; b < n; b++) {
-    let startIdx = b * bandWidth;
-    let endIdx = startIdx + bandWidth - 1;
-    let avgAmplitude = averageAmplitude(spectrum, startIdx, endIdx);
-    bands.push(avgAmplitude);
-  }
-
-  return bands;
-}
-*/
-
-// Calculate bands within the focused frequency range of human voices
-function calculateBands(spectrum, n) {
-  let bands = [];
-  let lowFreq = freqToIndex(80); // Low end of human voice
-  let highFreq = freqToIndex(1100); // High end capped at 1100 Hz
-  let bandWidth = Math.floor((highFreq - lowFreq + 1) / n); // Adjusted to focus within 80-1100 Hz
-
-  for (let b = 0; b < n; b++) {
-    let startIdx = lowFreq + b * bandWidth;
-    let endIdx = startIdx + bandWidth - 1;
-    // Ensure the last band captures all remaining frequencies up to the cap
-    if (b == n - 1) endIdx = highFreq;
-    let avgAmplitude = averageAmplitude(spectrum, startIdx, endIdx);
-    bands.push(avgAmplitude);
-  }
-
-  return bands;
-}
-
-
-// Calculate average amplitude in a given range of the spectrum array
-function averageAmplitude(spectrum, startIdx, endIdx) {
-  let total = 0;
-  for (let i = startIdx; i <= endIdx; i++) {
-    total += spectrum[i];
-  }
-  return total / (endIdx - startIdx + 1);
-}
-
-/*
-// Implement logic to determine when to send data
-function shouldSendData(bands) {
-  // Example condition, you might want to replace with your own logic
-  let threshold = 2; // Example threshold value
-  return bands.some(band => band > threshold);
-}*/
-
-// Implement logic to determine when to send data based on maximum amplitude
-let prevMaxAmplitude = 0; // Store previous max amplitude to detect significant changes
-const MIN_CHANGE = 0.5; // Minimum change in amplitude to consider sending data
-
-function shouldSendData(bands) {
-  // Calculate current max amplitude
-  let currentMaxAmplitude = Math.max(...bands);
-  let threshold = 100
-
-  //console.log("should send",currentMaxAmplitude)
-
-  // Check if the change in amplitude is significant
-  let change = Math.abs(currentMaxAmplitude - prevMaxAmplitude);
-  prevMaxAmplitude = currentMaxAmplitude; // Update for the next frame
-
-  // Determine if data should be sent based on threshold or significant change
-  return currentMaxAmplitude > threshold || change > MIN_CHANGE;
-}
-
-
-/*
-function pickNewEmoji() {
-  let emojis = ["😄", "🎉", "🌟", "🥳", "👏", "🎁","👑","🦄","🌷","💎","🦋"];
-  currentEmoji = random(emojis); // Randomly pick a new emoji
-}
-*/
-
 function pickNewEmoji(frequencyIndex, lowFreq, highFreq) {
   // Define your emojis within the function to make it self-contained
-  //let emojis = ["😄", "🎉", "🌟", "🥳", "👏", "🎁", "👑", "🦄", "🌷", "💎", "🦋"];
   let emojis = ["😄", "🌟", "🎁", "👑", "🦄", "🌷", "💎", "🦋"];
 
-  // Calculate the range of frequencies covered
   let totalRange = highFreq - lowFreq;
-
-  // Calculate the size of each bin based on the number of emojis and the total frequency range
   let binSize = totalRange / emojis.length;
 
   // Determine the bin index for the current frequency
   let binIndex = Math.floor((frequencyIndex - lowFreq) / binSize);
   binIndex = constrain(binIndex, 0, emojis.length - 1); // Ensure binIndex is within bounds
 
-  // Set the current emoji based on the bin index
   currentEmoji = emojis[binIndex];
 }
